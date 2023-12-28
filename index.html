@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .code-container {
+            white-space: pre-line;
+            font-family: 'Courier New', monospace;
+            margin: 10px;
+            padding: 10px;
+            background-color: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>mainifest.xml</h2>
+    <div class="code-container">
+        &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+        &lt;manifest xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+            xmlns:tools=&quot;http://schemas.android.com/tools&quot;&gt;
+
+            &lt;application
+                android:allowBackup=&quot;true&quot;
+                android:dataExtractionRules=&quot;@xml/data_extraction_rules&quot;
+                android:fullBackupContent=&quot;@xml/backup_rules&quot;
+                android:icon=&quot;@mipmap/ic_launcher&quot;
+                android:label=&quot;@string/app_name&quot;
+                android:roundIcon=&quot;@mipmap/ic_launcher_round&quot;
+                android:supportsRtl=&quot;true&quot;
+                android:theme=&quot;@style/Theme.SqliteApplication&quot;
+                tools:targetApi=&quot;31&quot;&gt;
+                &lt;activity
+                    android:name=&quot;.MainActivity&quot;
+                    android:exported=&quot;true&quot;&gt;
+                    &lt;intent-filter&gt;
+                        &lt;action android:name=&quot;android.intent.action.MAIN&quot; /&gt;
+
+                        &lt;category android:name=&quot;android.intent.category.LAUNCHER&quot; /&gt;
+                    &lt;/intent-filter&gt;
+                &lt;/activity&gt;
+            &lt;/application&gt;
+        &lt;/manifest&gt;
+    </div>
+    <h2>main_activity.java</h2>
+    <div class="code-container">
+        package com.example.sqliteapplication;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.database.Cursor;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EdgeEffect;
+import android.widget.EditText;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+    EditText uname,passwd;
+    Button insert,view,delete,update;
+    DBlogin db;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        uname=(EditText) findViewById(R.id.uname);
+        passwd=(EditText) findViewById(R.id.pwd);
+        insert=(Button) findViewById(R.id.insert);
+        delete=(Button) findViewById(R.id.delete);
+        view=(Button) findViewById(R.id.view);
+        update=(Button) findViewById(R.id.update);
+        db=new DBlogin(this);
+
+        insert.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String name=uname.getText().toString();
+                String pwd=passwd.getText().toString();
+                Boolean checkInsert=db.insertDB(name,pwd);
+                if(checkInsert==true)
+                    Toast.makeText(MainActivity.this, "Data Inserted successfully", Toast.LENGTH_LONG).show();
+                else
+                    Toast.makeText(MainActivity.this, "Not inserted", Toast.LENGTH_LONG).show();
+            uname.setText("");
+            passwd.setText("");
+            }
+        });
+
+        update.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String name=uname.getText().toString();
+                String pwd=passwd.getText().toString();
+                Boolean checkUpdate=db.updateDetail(name,pwd);
+                if(checkUpdate==true)
+                    Toast.makeText(MainActivity.this, "Data Updated successfully", Toast.LENGTH_LONG).show();
+                else
+                    Toast.makeText(MainActivity.this, "Not Updated", Toast.LENGTH_LONG).show();
+            }
+        });
+
+        delete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String name=uname.getText().toString();
+                Boolean checkDelete=db.deleteDetail(name);
+                if(checkDelete==true)
+                    Toast.makeText(MainActivity.this, "Data Deleted successfully", Toast.LENGTH_LONG).show();
+                else
+                    Toast.makeText(MainActivity.this, "Not Deleted", Toast.LENGTH_LONG).show();
+            }
+        });
+
+        view.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Cursor checkView = db.viewData();
+                if (checkView.getCount() == 0) {
+                    Toast.makeText(MainActivity.this, "No Entry", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                StringBuffer sb = new StringBuffer();
+                while (checkView.moveToNext()) {
+                    sb.append("Uname:" + checkView.getString(0) + "\n");
+                    sb.append("Password:" + checkView.getString(1) + "\n\n");
+                }
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setCancelable(true);
+                builder.setTitle("UserData");
+                builder.setMessage(sb.toString());
+                builder.show();
+            }
+        });
+    }
+}
+    </div>
+    <h2>DBlogin.java</h2>
+    <div class="code-container">
+        package com.example.sqliteapplication;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+import androidx.annotation.Nullable;
+
+public class DBlogin extends SQLiteOpenHelper {
+    public DBlogin(Context context) {
+        super(context, "loginData.db", null, 1);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL("create Table login(username TEXT, pwd TEXT) ");
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int i, int i1) {
+        db.execSQL("drop Table if exists login");
+    }
+    public Boolean insertDB(String username, String pwd)
+    {
+        SQLiteDatabase db=this.getWritableDatabase();
+        ContentValues cv=new ContentValues();
+        cv.put("username",username);
+        cv.put("pwd",pwd);
+        long r= db.insert("login",null,cv);
+        if (r==-1)
+            return false;
+        else
+            return true;
+    }
+    public Boolean updateDetail(String username, String pwd) {
+        SQLiteDatabase DB = this.getWritableDatabase();
+        ContentValues ContentValues = new ContentValues();
+        ContentValues.put("username", username);
+        ContentValues.put("pwd", pwd);
+        Cursor cursor = DB.rawQuery("select * from login where username=?", new String[]{username});
+        if (cursor.getCount() > 0) {
+            long result = DB.update("login", ContentValues, "username=?", new String[]{username});
+            if (result == -1)
+                return false;
+            else
+                return true;
+        } else {
+            return false;
+        }
+    }
+    public Boolean deleteDetail(String username)
+    {
+        SQLiteDatabase DB=this.getWritableDatabase();
+        Cursor cursor=DB.rawQuery("select * from login where username=?",new String[]{username});
+        if(cursor.getCount()>0){
+            long result=DB.delete("login","username=?",new String[]{username});
+            if(result==-1)
+                return false;
+            else
+                return true;
+        }
+        else
+            return false;
+    }
+    public Cursor viewData()
+    {
+        SQLiteDatabase db=this.getWritableDatabase();
+        Cursor cursor=db.rawQuery("select * from login",null);
+        return cursor;
+    }
+
+}
+
+    </div>
+    <h2>activity_main.xml</h2>
+    <div class="code-container">
+        &lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity"&gt;
+
+    &lt;TextView
+        android:id="@+id/text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Please Enter Below fields"
+        android:layout_marginTop="30dp"
+        android:textAlignment="center"
+        android:textStyle="bold"/&gt;
+    &lt;EditText
+        android:id="@+id/uname"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Username"
+        android:inputType="text"
+        android:layout_marginTop="30dp"
+        android:layout_below="@id/text"/&gt;
+    &lt;EditText
+        android:id="@+id/pwd"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Password"
+        android:layout_marginTop="30dp"
+        android:inputType="textPassword"
+        android:layout_below="@+id/uname" /&gt;
+    &lt;Button
+        android:id="@+id/insert"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Insert"
+        android:layout_marginTop="50dp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/pwd"/&gt;
+    &lt;Button
+        android:id="@+id/update"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Update"
+        android:layout_marginTop="30dp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/insert"/&gt;
+    &lt;Button
+        android:id="@+id/delete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Delete"
+        android:layout_marginTop="30dp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/update"
+        /&gt;
+    &lt;Button
+        android:id="@+id/view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="View"
+        android:layout_marginTop="30dp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@+id/delete"/&gt;
+
+&lt;/RelativeLayout&gt;
+
+    </div>
+</body>
+</html>
